@@ -5,10 +5,11 @@ var bodyParser=require('body-parser')
 var app=express()
 dotenv.config()
 var con=mysql.createConnection({
-    host:process.env.BASE_DE_DATOS_HOST,
-    user:process.env.BASE_DE_DATOS_USER,
-    password:process.env.BASE_DE_DATOS_PASSWORD,
-    database:process.env.BASE_DE_DATOS_DATABASE
+    host:process.env.HOST_DB,
+    user:process.env.USER_SECRET_DB,
+    password:process.env.PASSWORD_DB,
+    database:process.env.DATABASE_DB,
+    port:process.env.PORT_DB
 })
 con.connect();
 
