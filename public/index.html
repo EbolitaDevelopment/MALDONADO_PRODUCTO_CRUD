@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gestión de Usuarios</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" 
+          rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" 
+          crossorigin="anonymous">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Gestión de Usuarios</h1>
+        
+        <div class="card p-4 mb-3">
+            <h2>Crear Registro de Usuario</h2>
+            <form id="create">
+                <div class="mb-3">
+                    <input type="text" class="form-control" name="nombre" id="nombre" placeholder="Nombre">
+                </div>
+                <p id='nuevoUsuario' class="text-success"></p>
+                <button type="submit" class="btn btn-primary">Crear</button>
+            </form>
+        </div>
+
+        <div class="card p-4 mb-3">
+            <h2>Mostrar Registros de Usuario</h2>
+            <form id="read">
+                <p id='usuarios'></p>
+                <button type="submit" class="btn btn-info">Leer</button>
+            </form>
+        </div>
+
+        <div class="card p-4 mb-3">
+            <h2>Mostrar Registro con ID</h2>
+            <form id="readOne">
+                <div class="mb-3">
+                    <input type="text" class="form-control" name="id" id="id" placeholder="Id del registro">
+                </div>
+                <p id='usuario'></p>
+                <button type="submit" class="btn btn-info">Leer Uno</button>
+            </form>
+        </div>
+
+        <div class="card p-4 mb-3">
+            <h2>Editar Registro de Usuario</h2>
+            <form id="update">
+                <div class="mb-3">
+                    <input type="text" class="form-control" name="id" id="id" placeholder="Id del registro">
+                </div>
+                <div class="mb-3">
+                    <input type="text" class="form-control" name="nombre" id="nombre" placeholder="Nombre nuevo">
+                </div>
+                <p id='UsuarioCambiado'></p>
+                <button type="submit" class="btn btn-warning">Modificar</button>
+            </form>
+        </div>
+
+        <div class="card p-4 mb-3">
+            <h2>Borrar Registro de Usuario</h2>
+            <form id="deleteOne">
+                <div class="mb-3">
+                    <input type="text" class="form-control" name="id" id="id" placeholder="Id del registro">
+                </div>
+                <p id='UsuarioBorrado'></p>
+                <button type="submit" class="btn btn-danger">Borrar</button>
+            </form>
+        </div>
+
+        <div class="card p-4 mb-3">
+            <h2>Borrar Todos los Registros</h2>
+            <form id="delete">
+                <p id='UsuariosBorrados'></p>
+                <button type="submit" class="btn btn-danger">Borrar Todo</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" 
+            integrity="sha384-w76A2YFkg7Y6XgZNFh6L5Hsz5P5ZxAzZ5Lx9vvnYlEYB7PU+rD4wwn6EfR8X/Gz5" 
+            crossorigin="anonymous"></script>
+</body>
+</html>
+<script>
+document.getElementById("create").addEventListener("submit", async(event)=>{
+        event.preventDefault();
+        let response = await fetch("/agregarUsuario", {
+            method: "POST",
+            body: JSON.stringify({
+                nombre: event.target.nombre.value,
+            }),
+            headers: {
+                "Content-Type": "application/json"
+            }
+    })
+    let nuevoUsuario= document.getElementById("nuevoUsuario");
+    let responseJson = await response.json();
+    if(responseJson.message == "ok"){
+        document.getElementById("nuevoUsuario").innerHTML = "Usuario con nombre '"+responseJson.nombre+"' creado correctamente";
+    }else{
+        alert("Error al crear el usuario");
+        nuevoUsuario.innerHTML = "Usuario no creado";
+    }
+});
+document.getElementById("read").addEventListener("submit", async(event)=>{
+        event.preventDefault();
+        let response = await fetch("/obtenerUsuario", {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+    })
+    let responseJson = await response.json();
+    let cadena = ''
+    if(responseJson.message == "ok"){
+        for( let i = 0 ; i < responseJson.usuarios.length ; i++){ 
+               cadena+=`<p>ID: ${responseJson.usuarios[i].id}: nombre: ${responseJson.usuarios[i].nombre} </p>`;
+        }
+        document.getElementById("usuarios").innerHTML = cadena;
+    }else{
+        alert("Error al crear el usuario");
+        nuevoUsuario.innerHTML = "Hubo un error al obtener los usuarios";
+    }
+});
+document.getElementById("readOne").addEventListener("submit", async(event)=>{
+        event.preventDefault();
+        let id = event.target.id.value;
+        let response = await fetch("/obtenerUnUsuario", {
+            method: "PUT",
+            body: JSON.stringify({
+                id: id
+            }),
+            headers: {
+                "Content-Type": "application/json"
+            }
+    })
+    let responseJson = await response.json();
+    if(responseJson.message == "ok"){
+        if(responseJson.usuarios.length == 0){
+            document.getElementById("usuario").innerHTML = 'El Usuario con ID: '+id+', no esta registrado';}
+        else{
+            document.getElementById("usuario").innerHTML = 'El Usuario con ID: '+id+', esta registrado como: "'+responseJson.usuarios[0].nombre+'"';
+        }
+    }else{
+        alert("Error al crear el usuario");
+        nuevoUsuario.innerHTML = "Hubo un error al obtener el usuario";
+    }
+});
+document.getElementById("update").addEventListener("submit", async(event)=>{
+        event.preventDefault();
+    let response = await fetch("/editarUsuario", {
+            method: "PUT",
+            body: JSON.stringify({
+                nombre: event.target.nombre.value,
+                id: event.target.id.value
+            }),
+            headers: {
+                "Content-Type": "application/json"
+            }
+    })
+    let responseJson = await response.json();
+    if(responseJson.message == "ok"){
+        document.getElementById("UsuarioCambiado").innerHTML = "RESULTADOS: "+responseJson.respuesta+"  nombre cambiado correctamente";
+    }else{
+        alert("Error al editar el usuario");
+        document.getElementById("UsuarioCambiado").innerHTML = "Hubo un error al editar el registro. "+ responseJson.message;
+    }
+});
+document.getElementById("deleteOne").addEventListener("submit", async(event)=>{
+        event.preventDefault();
+        let response = await fetch("/BorrarUnUsuario", {
+            method: "DELETE",
+            body: JSON.stringify({
+                id: event.target.id.value
+            }),
+            headers: {
+                "Content-Type": "application/json"
+            }
+    })
+    let responseJson = await response.json();
+    if(responseJson.message == "ok"){
+        if(responseJson.respuesta == 0){
+            document.getElementById("UsuarioBorrado").innerHTML = "RESULTADOS: No se encontró el registro con dicho id.";
+        }
+        else{
+        document.getElementById("UsuarioBorrado").innerHTML = "RESULTADOS: Se borraron la siguiente cantidad de registros: "+responseJson.respuesta;}
+        }else{
+        alert("Error al borrar el usuario");
+        nuevoUsuario.innerHTML = "Hubo un error al borrar el usuario";
+    }
+});
+document.getElementById("delete").addEventListener("submit", async(event)=>{
+        event.preventDefault();
+    let decision = confirm('¿Estas seguro que deseas borrar todos los registros?')
+    if(decision == true){
+        let response = await fetch("/BorrarUsuarios", {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json"
+            }
+    })
+    let responseJson = await response.json();
+    if(responseJson.message == "ok"){
+        document.getElementById("UsuariosBorrados").innerHTML = "RESULTADOS: Se borraron la siguiente cantidad de registros: "+responseJson.respuesta;
+    }else{
+        alert("Error borrar los usuarios");
+        nuevoUsuario.innerHTML = "Hubo un error al borrar los usuarios";
+    }}
+});
+
+</script>
