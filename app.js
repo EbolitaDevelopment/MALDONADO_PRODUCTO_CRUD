@@ -1,3 +1,4 @@
+//Maldonado Alcala Leonardo 6IV8 
 const express = require("express")
 const dotenv=require("dotenv")
 const mysql= require("mysql2")
@@ -19,21 +20,45 @@ app.use(bodyParser.urlencoded({
     extended:true
 }))
 app.use(express.static('public'))
-
+//******************************************************************************************************************* */
+function contieneEtiquetaHTML(texto) {
+    return /<[^>]+>/.test(texto); }
+function validarTexto(texto) {
+    return /^[a-zA-ZÁÉÍÓÚáéíóúÑñ\s]{1,30}$/.test(texto);
+}
+//******************************************************************************************************************* */
 app.post('/agregarUsuario',(req,res)=>{
+    try{
+        let { nombre, apellidop, apellidom, edad, posicion, peso, altura, nacionalidad } = req.body;
+        if (![nombre, apellidop, apellidom, edad, posicion, peso, altura, nacionalidad].every(Boolean)) {
+            return res.status(400).send({ message: "Faltan parámetros o hay datos manipulados en el registro" });
+        }
+        edad = parseInt(edad);
+        posicion = parseInt(posicion);
+        peso = parseInt(peso);
+        altura = parseInt(altura);
 
-        let nombre=req.body.nombre
-        con.query('INSERT INTO usuario (nombre) VALUES (?)', [nombre], (err, respuesta, fields) => {
+        if(contieneEtiquetaHTML(nombre)||contieneEtiquetaHTML(apellidom)||contieneEtiquetaHTML(apellidop)||contieneEtiquetaHTML(nacionalidad)
+            ||isNaN(edad)|| isNaN(posicion)||isNaN(peso)||isNaN(altura)){
+            return res.status(400).send({message:"Datos Incorrectos"});}
+        
+        if(!validarTexto(nombre)||!validarTexto(apellidom)||!validarTexto(apellidop)||!validarTexto(nacionalidad)){
+            return res.status(400).send({message:"Solo puedes ingresar texto de entre 1 y 30 caracteres"});}
+
+        con.query('INSERT INTO usuario (nombre,apellidopaterno,apellidomaterno,edad,posición,altura,peso,nacionalidad) VALUES (?,?,?,?,?,?,?,?)', 
+            [nombre,apellidop,apellidom,edad,posicion,altura,peso,nacionalidad], (err, respuesta, fields) => {
             if (err) {
                 console.log("Error al conectar", err);
                 return res.status(500).send({message:"Error al conectar"});
             }
-           
-            return res.status(202).send({message:'ok',nombre: ` ${nombre}`});
-        });
-   
+            return res.status(202).send({message:'ok',nombre:` ${nombre}`,apellidopaterno: `${apellidop}`,nacionalidad: `${nacionalidad}`});
+        }); 
+    }catch(error){
+        console.log(error)
+        return res.status(500).send({message:"Error en los campos"});
+    }
 })
-
+//******************************************************************************************************************* */
 app.get('/obtenerUsuario',(req,res)=>{
     con.query('SELECT * from usuario', (err, respuesta, fields) => {
         if (err) {
@@ -45,43 +70,117 @@ app.get('/obtenerUsuario',(req,res)=>{
     });
 
 })
-app.put('/obtenerUnUsuario',(req,res)=>{
-    let id=req.body.id
-    con.query('SELECT nombre from usuario WHERE id= (?)',[id], (err, respuesta, fields) => {
-        if (err) {
-            console.log("Error al conectar", err);
-            return res.status(500).send({message:"Error al conectar"});
-        }
-        console.log(respuesta)
-        return res.status(202).send({message: 'ok',usuarios : respuesta});
-    });
+//******************************************************************************************************************* */
+app.put('/obtenerUnUsuario', (req, res) => {
+    let id = req.body.id;
+    let solicitud = req.body.solicitud;
 
-})
-
-app.put('/editarUsuario',(req,res)=>{
-    let id=req.body.id
-    let nombre=req.body.nombre
-    con.query('SELECT nombre FROM usuario WHERE id=(?)',[id] , (error, response,campos) => {
-        if (error) {
-            console.log("Error al conectar", err);
-            return res.status(500).send({message:"Error al encontrar al usuario"});
-            
-        }
-    if(response.length==0){
-        return res.status(404).send({message:"No se encontro el usuario"});
+    if (!id || !solicitud) {
+        return res.status(400).send({ message: "Faltan parámetros" });
     }
-    con.query('UPDATE usuario SET nombre = (?) WHERE id =(?)',[nombre,id], (err, respuesta, fields) => {
+    if (isNaN(id)||!validarTexto(solicitud)||contieneEtiquetaHTML(solicitud)) {
+        return res.status(400).send({ message: "No intentes adulterar la solicitud" });
+    }
+    const columnasPermitidas = ["nombre", "apellidoPaterno", "apellidoMaterno", "edad", "posición", "altura", "peso", "nacionalidad"];
+    if (!columnasPermitidas.includes(solicitud)) {
+        return res.status(400).send({ message: "Parámetro no permitido" });
+    }
+
+    let query = `SELECT ${solicitud} FROM usuario WHERE id = ?`;
+
+    con.query(query, [id], (err, respuesta) => {
         if (err) {
             console.log("Error al conectar", err);
-            return res.status(500).send({message:"Error al actualizar registro"});
+            return res.status(500).send({ message: "Error al conectar" });
         }
-        console.log(respuesta.info)
-        return res.status(202).send({message: 'ok',respuesta : respuesta.info});
-    });});
 
-})
+        if (respuesta.length === 0) {
+            return res.status(404).send({ message: "Usuario no encontrado" });
+        }
+        if (solicitud === "posición") {
+            let idPosicion = respuesta[0].posición; 
+
+            con.query(`SELECT descripcion FROM posición WHERE id = ?`, [idPosicion], (err, respuestaPosicion) => {
+                if (err) {
+                    console.log("Error al conectar", err);
+                    return res.status(500).send({ message: "Error al conectar" });
+                }
+
+                if (respuestaPosicion.length === 0) {
+                    return res.status(404).send({ message: "Posición no encontrada" });
+                }
+
+                return res.status(200).send({ message: 'ok', usuario: respuestaPosicion[0].descripcion });
+            });
+
+        } else {
+            return res.status(200).send({ message: 'ok', usuario: respuesta[0][solicitud] });
+        }
+    });
+});
+//******************************************************************************************************************* */
+app.put('/editarUsuario', (req, res) => {
+    let { id, solicitud, cambio } = req.body;
+
+    if (!id || !solicitud || !cambio) {
+        return res.status(400).send({ message: "Faltan parámetros" });
+    }
+    if (isNaN(id)||!validarTexto(solicitud)||contieneEtiquetaHTML(solicitud)||contieneEtiquetaHTML(cambio)) {
+        return res.status(400).send({ message: "No intentes adulterar la solicitud" });
+    }
+    const columnasPermitidas = ["nombre", "apellidoPaterno", "apellidoMaterno", "edad", "posición", "altura", "peso", "nacionalidad"];
+    if (!columnasPermitidas.includes(solicitud)) {
+        return res.status(400).send({ message: "Parámetro no permitido" });
+    }
+
+    if (["edad", "peso", "altura"].includes(solicitud)) {
+        cambio = parseInt(cambio);
+        if (isNaN(cambio)) {
+            return res.status(400).send({ message: "El valor debe ser un número" });
+        }
+    }else if (!validarTexto(cambio) || contieneEtiquetaHTML(cambio)) {
+        return res.status(400).send({ message: "El valor debe ser texto sin etiquetas HTML" });
+    }
+    const ejecutarUpdate = (nuevoValor) => {
+        let query = `UPDATE usuario SET ${solicitud} = ? WHERE id = ?`;
+        con.query(query, [nuevoValor, id], (error, response) => {
+            if (error) {
+                console.log("Error al conectar", error);
+                return res.status(500).send({ message: "Error al actualizar el usuario" });
+            }
+
+            if (response.affectedRows === 0) {
+                return res.status(404).send({ message: "No se encontró el usuario" });
+            }
+
+            return res.status(202).send({ message: 'ok', respuesta: `Usuario actualizado correctamente` });
+        });
+    };
+    if (solicitud === "posición") {
+        let posicion = cambio.toLowerCase();
+        con.query(`SELECT id FROM posición WHERE descripcion = ?`, [posicion], (err, respuestaPosicion) => {
+            if (err) {
+                console.log("Error al conectar", err);
+                return res.status(500).send({ message: "Error al conectar" });
+            }
+            if (respuestaPosicion.length === 0) {
+                return res.status(404).send({ message: "Posición no encontrada" });
+            }
+
+            let idPosicion = respuestaPosicion[0].id;
+            ejecutarUpdate(idPosicion);
+        });
+
+    } else {
+        ejecutarUpdate(cambio); 
+    }
+});
+//******************************************************************************************************************* */
 app.delete('/BorrarUnUsuario',(req,res)=>{
     let id=req.body.id
+    if (!id||isNaN(id)) {
+        return res.status(400).send({ message: "Faltan parámetros o el id no es un número" });
+    }
     con.query('DELETE usuario FROM usuario WHERE id =(?)',[id], (err, respuesta, fields) => {
         if (err) {
             console.log("Error al conectar", err);
@@ -92,7 +191,7 @@ app.delete('/BorrarUnUsuario',(req,res)=>{
     });
 
 })
-
+//******************************************************************************************************************* */
 app.delete('/BorrarUsuarios',(req,res)=>{
     con.query('DELETE usuario FROM usuario;', (err, respuesta, fields) => {
         if (err) {
@@ -104,6 +203,7 @@ app.delete('/BorrarUsuarios',(req,res)=>{
     });
 
 })
+//******************************************************************************************************************* */
 app.listen(3000,()=>{
     console.log('Servidor escuchando en el puerto 3000')
 })

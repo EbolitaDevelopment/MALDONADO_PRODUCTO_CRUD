@@ -1,0 +1,17 @@
+body {
+    background-color: #f8f9fa; 
+        font-family: 'Bebas Neue', sans-serif;   
+}
+.table {
+    background-color: #fff; 
+    border: 2px solid;
+} 
+.form-control {
+    margin-bottom: 15px;
+}
+.btn-primary:hover,
+.btn-info:hover,
+.btn-warning:hover,
+.btn-danger:hover {
+    opacity: 0.8
+}

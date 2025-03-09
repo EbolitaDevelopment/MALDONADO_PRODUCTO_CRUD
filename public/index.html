@@ -7,16 +7,36 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" 
           rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" 
           crossorigin="anonymous">
+    <link rel="stylesheet" href="css.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
 </head>
-<body class="bg-light">
+<body>
     <div class="container mt-5">
-        <h1 class="text-center mb-4">Gestión de Usuarios</h1>
+        <h1 class="text-center mb-4">MÓDULO DE CONTROL DE REGISTROS </h1><h2 class="text-center mb-4">ASPIRANTES EQUIPO DE BALONCESTO</h2>
         
         <div class="card p-4 mb-3">
             <h2>Crear Registro de Usuario</h2>
             <form id="create">
-                <div class="mb-3">
-                    <input type="text" class="form-control" name="nombre" id="nombre" placeholder="Nombre">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <input type="text" class="form-control" name="nombre" id="nombre" placeholder="Nombre">
+                        <input type="text" class="form-control" name="apellidop" id="apellidop" placeholder="Apellido Paterno">
+                        <input type="text" class="form-control" name="apellidom" id="apellidom" placeholder="Apellido Materno">
+                        <input type="number" class="form-control" name="edad" id="edad" placeholder="Edad">
+                    </div>
+                    <div class="col-md-6">
+                        <select id="posicion" name="posicion" class="form-control">
+                            <option value="ninguno">Elige tu posición</option>
+                            <option value="1">Base</option>
+                            <option value="2">Escolta</option>
+                            <option value="3">Alero</option>
+                            <option value="4">Ala-pivot</option>
+                            <option value="5">Pivot</option>
+                        </select>
+                        <input type="number" class="form-control" name="altura" id="altura" placeholder="Altura en cm">
+                        <input type="number" class="form-control" name="peso" id="peso" placeholder="Peso en kg">
+                        <input type="text" class="form-control" name="nacionalidad" id="nacionalidad" placeholder="Nacionalidad">
+                    </div>
                 </div>
                 <p id='nuevoUsuario' class="text-success"></p>
                 <button type="submit" class="btn btn-primary">Crear</button>
@@ -26,7 +46,9 @@
         <div class="card p-4 mb-3">
             <h2>Mostrar Registros de Usuario</h2>
             <form id="read">
-                <p id='usuarios'></p>
+                <table id='usuarios' class='table table-striped table-bordered table-hover'>
+                    
+                </table>
                 <button type="submit" class="btn btn-info">Leer</button>
             </form>
         </div>
@@ -35,7 +57,18 @@
             <h2>Mostrar Registro con ID</h2>
             <form id="readOne">
                 <div class="mb-3">
-                    <input type="text" class="form-control" name="id" id="id" placeholder="Id del registro">
+                    <input type="number" class="form-control" name="id" id="id" placeholder="Id del registro">
+                    <select id="solicitud" name="solicitud" class="form-control">
+                        <option value="ninguno">Elige lo que deseas buscar:</option>
+                        <option value="nombre">Nombre</option>
+                        <option value="apellidoPaterno">A.Paterno</option>
+                        <option value="apellidoMaterno">A.Materno</option>
+                        <option value="edad">Edad</option>
+                        <option value="posición">Posición</option>
+                        <option value="altura">Altura</option>
+                        <option value="peso">Peso</option>
+                        <option value="nacionalidad">Nacionalidad</option>
+                    </select>
                 </div>
                 <p id='usuario'></p>
                 <button type="submit" class="btn btn-info">Leer Uno</button>
@@ -46,10 +79,19 @@
             <h2>Editar Registro de Usuario</h2>
             <form id="update">
                 <div class="mb-3">
-                    <input type="text" class="form-control" name="id" id="id" placeholder="Id del registro">
-                </div>
-                <div class="mb-3">
-                    <input type="text" class="form-control" name="nombre" id="nombre" placeholder="Nombre nuevo">
+                    <input type="number" class="form-control" name="id" id="id" placeholder="Id del registro">
+                    <select id="solicitud" name="solicitud" class="form-control">
+                        <option value="ninguno">Elige lo que deseas cambiar:</option>
+                        <option value="nombre">Nombre</option>
+                        <option value="apellidoPaterno">A.Paterno</option>
+                        <option value="apellidoMaterno">A.Materno</option>
+                        <option value="edad">Edad</option>
+                        <option value="posición">Posición</option>
+                        <option value="altura">Altura</option>
+                        <option value="peso">Peso</option>
+                        <option value="nacionalidad">Nacionalidad</option>
+                    </select>
+                    <input class="form-control" name="cambio" id="cambio" placeholder="¿Con qué deseas cambiar el dato?">
                 </div>
                 <p id='UsuarioCambiado'></p>
                 <button type="submit" class="btn btn-warning">Modificar</button>
@@ -60,7 +102,7 @@
             <h2>Borrar Registro de Usuario</h2>
             <form id="deleteOne">
                 <div class="mb-3">
-                    <input type="text" class="form-control" name="id" id="id" placeholder="Id del registro">
+                    <input type="number" class="form-control" name="id" id="id" placeholder="Id del registro">
                 </div>
                 <p id='UsuarioBorrado'></p>
                 <button type="submit" class="btn btn-danger">Borrar</button>
@@ -81,131 +123,4 @@
             crossorigin="anonymous"></script>
 </body>
 </html>
-<script>
-document.getElementById("create").addEventListener("submit", async(event)=>{
-        event.preventDefault();
-        let response = await fetch("/agregarUsuario", {
-            method: "POST",
-            body: JSON.stringify({
-                nombre: event.target.nombre.value,
-            }),
-            headers: {
-                "Content-Type": "application/json"
-            }
-    })
-    let nuevoUsuario= document.getElementById("nuevoUsuario");
-    let responseJson = await response.json();
-    if(responseJson.message == "ok"){
-        document.getElementById("nuevoUsuario").innerHTML = "Usuario con nombre '"+responseJson.nombre+"' creado correctamente";
-    }else{
-        alert("Error al crear el usuario");
-        nuevoUsuario.innerHTML = "Usuario no creado";
-    }
-});
-document.getElementById("read").addEventListener("submit", async(event)=>{
-        event.preventDefault();
-        let response = await fetch("/obtenerUsuario", {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json"
-            }
-    })
-    let responseJson = await response.json();
-    let cadena = ''
-    if(responseJson.message == "ok"){
-        for( let i = 0 ; i < responseJson.usuarios.length ; i++){ 
-               cadena+=`<p>ID: ${responseJson.usuarios[i].id}: nombre: ${responseJson.usuarios[i].nombre} </p>`;
-        }
-        document.getElementById("usuarios").innerHTML = cadena;
-    }else{
-        alert("Error al crear el usuario");
-        nuevoUsuario.innerHTML = "Hubo un error al obtener los usuarios";
-    }
-});
-document.getElementById("readOne").addEventListener("submit", async(event)=>{
-        event.preventDefault();
-        let id = event.target.id.value;
-        let response = await fetch("/obtenerUnUsuario", {
-            method: "PUT",
-            body: JSON.stringify({
-                id: id
-            }),
-            headers: {
-                "Content-Type": "application/json"
-            }
-    })
-    let responseJson = await response.json();
-    if(responseJson.message == "ok"){
-        if(responseJson.usuarios.length == 0){
-            document.getElementById("usuario").innerHTML = 'El Usuario con ID: '+id+', no esta registrado';}
-        else{
-            document.getElementById("usuario").innerHTML = 'El Usuario con ID: '+id+', esta registrado como: "'+responseJson.usuarios[0].nombre+'"';
-        }
-    }else{
-        alert("Error al crear el usuario");
-        nuevoUsuario.innerHTML = "Hubo un error al obtener el usuario";
-    }
-});
-document.getElementById("update").addEventListener("submit", async(event)=>{
-        event.preventDefault();
-    let response = await fetch("/editarUsuario", {
-            method: "PUT",
-            body: JSON.stringify({
-                nombre: event.target.nombre.value,
-                id: event.target.id.value
-            }),
-            headers: {
-                "Content-Type": "application/json"
-            }
-    })
-    let responseJson = await response.json();
-    if(responseJson.message == "ok"){
-        document.getElementById("UsuarioCambiado").innerHTML = "RESULTADOS: "+responseJson.respuesta+"  nombre cambiado correctamente";
-    }else{
-        alert("Error al editar el usuario");
-        document.getElementById("UsuarioCambiado").innerHTML = "Hubo un error al editar el registro. "+ responseJson.message;
-    }
-});
-document.getElementById("deleteOne").addEventListener("submit", async(event)=>{
-        event.preventDefault();
-        let response = await fetch("/BorrarUnUsuario", {
-            method: "DELETE",
-            body: JSON.stringify({
-                id: event.target.id.value
-            }),
-            headers: {
-                "Content-Type": "application/json"
-            }
-    })
-    let responseJson = await response.json();
-    if(responseJson.message == "ok"){
-        if(responseJson.respuesta == 0){
-            document.getElementById("UsuarioBorrado").innerHTML = "RESULTADOS: No se encontró el registro con dicho id.";
-        }
-        else{
-        document.getElementById("UsuarioBorrado").innerHTML = "RESULTADOS: Se borraron la siguiente cantidad de registros: "+responseJson.respuesta;}
-        }else{
-        alert("Error al borrar el usuario");
-        nuevoUsuario.innerHTML = "Hubo un error al borrar el usuario";
-    }
-});
-document.getElementById("delete").addEventListener("submit", async(event)=>{
-        event.preventDefault();
-    let decision = confirm('¿Estas seguro que deseas borrar todos los registros?')
-    if(decision == true){
-        let response = await fetch("/BorrarUsuarios", {
-            method: "DELETE",
-            headers: {
-                "Content-Type": "application/json"
-            }
-    })
-    let responseJson = await response.json();
-    if(responseJson.message == "ok"){
-        document.getElementById("UsuariosBorrados").innerHTML = "RESULTADOS: Se borraron la siguiente cantidad de registros: "+responseJson.respuesta;
-    }else{
-        alert("Error borrar los usuarios");
-        nuevoUsuario.innerHTML = "Hubo un error al borrar los usuarios";
-    }}
-});
-
-</script>
+<script src="index.js"></script>
