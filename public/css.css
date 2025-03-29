@@ -1,17 +1,128 @@
 body {
-    background-color: #f8f9fa; 
-        font-family: 'Bebas Neue', sans-serif;   
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    font-family: 'Bebas Neue', sans-serif;
 }
-.table {
-    background-color: #fff; 
-    border: 2px solid;
-} 
+
+.login-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.login-box {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2.5rem;
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 800px; /* Aumentamos el ancho para acomodar las columnas */
+}
+
+@media (max-width: 768px) {
+    .login-box {
+        padding: 1.5rem;
+    }
+}
+
+.control-container {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+h2 {
+    color: #333;
+    letter-spacing: 1px;
+}
+
 .form-control {
-    margin-bottom: 15px;
+    border-radius: 8px;
+    padding: 10px;
+    border: 1px solid #ddd;
 }
-.btn-primary:hover,
-.btn-info:hover,
-.btn-warning:hover,
-.btn-danger:hover {
-    opacity: 0.8
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.btn-primary {
+    background: linear-gradient(to right, #667eea, #764ba2);
+    border: none;
+    padding: 12px;
+    font-size: 1.1rem;
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(to right, #764ba2, #667eea);
+}
+
+/* Ajustes específicos para el formulario de registro */
+select.form-control {
+    height: 45px;
+    margin-bottom: 1rem;
+}
+
+#btnRegresar {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+}
+
+/* Ajuste para inputs en el registro */
+.login-box .form-control {
+    margin-bottom: 0.5rem;
+}
+
+/* Mensaje de éxito */
+.text-success {
+    text-align: center;
+    margin: 10px 0;
+}
+
+/* Estilos específicos para la página de control */
+.control-box {
+    max-width: 900px;
+}
+
+.table {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table thead {
+    background: linear-gradient(to right, #667eea, #764ba2);
+    color: white;
+}
+
+.table th, .table td {
+    padding: 12px;
+    vertical-align: middle;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.1);
+}
+
+/* Botones de acción en la tabla */
+.btn-action {
+    padding: 5px 10px;
+    margin: 0 2px;
+}
+
+/* Ajuste para scroll en dispositivos móviles */
+.table-responsive {
+    max-height: 70vh;
+    overflow-y: auto;
 }

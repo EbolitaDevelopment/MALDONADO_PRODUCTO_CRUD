@@ -1,34 +1,7 @@
 //Maldonado Alcala Leonardo 6IV8 
-document.getElementById("create").addEventListener("submit", async(event)=>{
-        event.preventDefault();
-        let response = await fetch("/agregarUsuario", {
-            method: "POST",
-            body: JSON.stringify({
-                nombre: event.target.nombre.value,
-                apellidop: event.target.apellidop.value,
-                apellidom: event.target.apellidom.value,
-                edad: event.target.edad.value,
-                posicion: event.target.posicion.value,
-                altura: event.target.altura.value,
-                peso: event.target.peso.value,
-                nacionalidad: event.target.nacionalidad.value
-            }),
-            headers: {
-                "Content-Type": "application/json"
-            }
-    })
-    let nuevoUsuario= document.getElementById("nuevoUsuario");
-    let responseJson = await response.json();
-    if(responseJson.message == "ok"){
-        document.getElementById("nuevoUsuario").innerHTML = `Aspirante '${responseJson.nombre} ${responseJson.apellidopaterno}'
-        con nacionalidad '${responseJson.nacionalidad}' fue registrado(a) correctamente`;
-    }else{
-        alert("Error al crear el usuario");
-        nuevoUsuario.innerHTML = "Usuario no creado : "+responseJson.message;
-    }
-});
 /******************************************************************************************************************************************************/
 document.getElementById("read").addEventListener("submit", async (event) => {
+    console.log("Evento submit capturado");
     event.preventDefault();
 
     try {
@@ -44,22 +17,31 @@ document.getElementById("read").addEventListener("submit", async (event) => {
         let cadena = `
         <tr>
             <th>ID</th>
+            <th>Usuario</th>
             <th>Nombre Completo</th>
             <th>Edad</th>
+            <th>Altura</th>
+            <th>Peso</th>
             <th>Nacionalidad</th>
+            <th>Posición</th>
         </tr>`;
 
         if (responseJson.message === "ok") {
+            console.log("Respuesta del servidor:", responseJson);
             responseJson.usuarios.forEach(usuario => {
-                console.log(usuario);
                 cadena += `
                 <tr>
                     <td>${usuario.id}</td>
-                    <td>${usuario.nombre} ${usuario.apellidoPaterno} ${usuario.apellidoMaterno}</td>
+                    <td>${usuario.usuario}</td>
+                    <td>${usuario.nombre} ${usuario.apellidopaterno} ${usuario.apellidomaterno}</td>
                     <td>${usuario.edad}</td>
+                    <td>${usuario.altura}</td>
+                    <td>${usuario.peso}</td>
                     <td>${usuario.nacionalidad}</td>
+                    <td>${usuario.posicionNombre}</td>
                 </tr>`;
             });
+            
 
             document.getElementById("usuarios").innerHTML = cadena;
         } else {
@@ -67,8 +49,8 @@ document.getElementById("read").addEventListener("submit", async (event) => {
             document.getElementById("usuarios").innerHTML = "<tr><td colspan='4'>Hubo un error al obtener los usuarios</td></tr>";
         }
     } catch (error) {
-        console.error("Error en la petición:", error);
-        alert("Ocurrió un error al conectar con el servidor");
+        console.error(error);
+        alert(error);
     }
 });
 /******************************************************************************************************************************************************/
