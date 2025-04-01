@@ -9,7 +9,7 @@ async function loggeado(req, res, next) {
         if (estaLoggeado) {
             return next();
         }
-        return res.redirect("/").json({ message: 'No autorizado' });
+        return res.redirect("/");
     } catch (error) {
         console.error('Error en verificación:', error);
         return res.redirect("/");

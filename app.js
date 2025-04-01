@@ -1,5 +1,6 @@
 //Maldonado Alcala Leonardo 6IV8 
 const express = require("express")
+const sesion = require("express-session")
 const dotenv = require("dotenv")
 const mysql = require("mysql2")
 const bodyParser = require('body-parser')
@@ -10,6 +11,12 @@ const {loggeado, nologgeado} = require("./Autorización/autorización.js")
 
 var app = express()
 dotenv.config()
+
+app.use(sesion({
+    secret: 'mySecretKey',
+    resave: false,
+    saveUninitialized: true
+}))
 
 var con = mysql.createConnection({
     host: process.env.HOST_DB,
@@ -25,6 +32,24 @@ app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(express.static(path.join(__dirname, "public")))
 app.use(express.json())
+
+app.get('/setSession', (req, res) => {
+    req.session.usuario = "usuarioEjemplo";
+    res.send("Sesión establecida");
+});
+app.get('/getSession', (req, res) => {
+    const usuario = req.session.usuario;
+    res.send(`Usuario en sesión: ${usuario}`);
+});
+app.get('/destroySession', (req, res) => {
+    req.session.destroy((error)=>{
+        if(error){
+            console.log(error)
+            return res.status(500).send("Error al destruir la sesión")
+        }
+        res.send("Sesión destruida");
+    });
+});
 
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "paginas/index.html")))
 app.get("/control",loggeado ,(req, res) => res.sendFile(path.join(__dirname, "paginas/control.html")))
