@@ -1,3 +1,22 @@
+const auth= async() => {
+    const sesion = sessionStorage.getItem("usuario");
+    
+        const consulta = await fetch("/verificar-sesion", {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                usuario: sesion
+            })
+        });
+        
+        const consultaJson = await consulta.json();
+        console.log(consultaJson);
+        if(consultaJson.sesionActiva===true|| consultaJson.sesionActiva === undefined){
+            window.location.href = "/";
+        }}
+    auth();
 document.getElementById("create").addEventListener("submit", async(event)=>{
     event.preventDefault();
     let response = await fetch("/agregarUsuario", {
@@ -24,9 +43,10 @@ let responseJson = await response.json();
 if(responseJson.message == "ok"){
     document.getElementById("nuevoUsuario").innerHTML = `Aspirante '${responseJson.nombre} ${responseJson.apellidopaterno}'
     con nacionalidad '${responseJson.nacionalidad}' fue registrado(a) correctamente`;
+    sessionStorage.setItem("usuario", responseJson.token);
     window.location.href = "/";
 }else{
     alert("Error al crear el usuario");
     nuevoUsuario.innerHTML = "Usuario no creado : "+responseJson.message;
 }
-});
+})

@@ -7,15 +7,19 @@ const bodyParser = require('body-parser')
 const path = require("path")
 const jsonwebtoken = require("jsonwebtoken")
 const cookieParser = require('cookie-parser')
-const {loggeado, nologgeado} = require("./Autorización/autorización.js")
 
 var app = express()
 dotenv.config()
 
 app.use(sesion({
-    secret: 'mySecretKey',
+    secret: process.env.SESSION_SECRET || 'mySecretKey',
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24 horas
+    }
 }))
 
 var con = mysql.createConnection({
@@ -25,7 +29,23 @@ var con = mysql.createConnection({
     database: process.env.DATABASE_DB,
     port: process.env.PORT_DB
 })
-con.connect();
+
+con.connect((err) => {
+    if (err) {
+        console.error('Error connecting to database:', err);
+        process.exit(1);
+    }
+    console.log('Successfully connected to database');
+});
+
+con.on('error', function(err) {
+    console.error('Database error:', err);
+    if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+        con = mysql.createConnection(con.config);
+    } else {
+        throw err;
+    }
+});
 
 app.use(cookieParser())
 app.use(bodyParser.json())
@@ -33,28 +53,11 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use(express.static(path.join(__dirname, "public")))
 app.use(express.json())
 
-app.get('/setSession', (req, res) => {
-    req.session.usuario = "usuarioEjemplo";
-    res.send("Sesión establecida");
-});
-app.get('/getSession', (req, res) => {
-    const usuario = req.session.usuario;
-    res.send(`Usuario en sesión: ${usuario}`);
-});
-app.get('/destroySession', (req, res) => {
-    req.session.destroy((error)=>{
-        if(error){
-            console.log(error)
-            return res.status(500).send("Error al destruir la sesión")
-        }
-        res.send("Sesión destruida");
-    });
-});
 
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "paginas/index.html")))
-app.get("/control",loggeado ,(req, res) => res.sendFile(path.join(__dirname, "paginas/control.html")))
-app.get("/registro",nologgeado,(req, res) => res.sendFile(path.join(__dirname, "paginas/registro.html")))
-app.get("/isesion", nologgeado,(req, res) => res.sendFile(path.join(__dirname, "paginas/login.html")))
+app.get("/control",(req, res) => res.sendFile(path.join(__dirname, "paginas/control.html")))
+app.get("/registro",(req, res) => res.sendFile(path.join(__dirname, "paginas/registro.html")))
+app.get("/isesion",(req, res) => res.sendFile(path.join(__dirname, "paginas/login.html")))
 
 //******************************************************************************************************************* */
 function contieneEtiquetaHTML(texto) {
@@ -131,17 +134,17 @@ app.post('/agregarUsuario', async (req, res) => {
         };
 
         await insertUser();
-        const token = jsonwebtoken.sign({ user: usuario}, process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRATION })
-        const cookieOption = {
-            expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRES * 24 * 60 * 60 * 1000),
-            path: "/",
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict'
-        }
-        res.cookie("cookiesesion", token, cookieOption)
-        return res.status(202).send({ message: 'ok', nombre: ` ${nombre}`, apellidopaterno: `${apellidop}`, nacionalidad: `${nacionalidad}`,redireccion: "/" });
+        const token = 'Bearer ' + jsonwebtoken.sign({ user: usuario}, process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRATION });
+
+        return res.status(202).send({ 
+            message: 'ok', 
+            nombre: ` ${nombre}`, 
+            apellidopaterno: `${apellidop}`, 
+            nacionalidad: `${nacionalidad}`,
+            redireccion: "/",
+            token: token
+        });
 
     } catch (error) {
         console.log(error);
@@ -343,80 +346,48 @@ app.put('/login', (req, res) => {
         if (respuesta.length === 0) {
             return res.status(404).send({ message: "Usuario no encontrado" });
         }
-        const token = jsonwebtoken.sign({ user: usuario }, process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRATION })
-        const cookieOption = {
-            expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRES * 24 * 60 * 60 * 1000),
-            path: "/",
-            httpOnly: true,
-            sameSite: 'strict'
-        }
-        res.cookie("cookiesesion", token, cookieOption)
-        return res.status(200).send({ message: 'ok', respuesta: respuesta[0].id, redireccion: "/" });
+        const token = 'Bearer ' + jsonwebtoken.sign({ user: usuario }, process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRATION });
+        return res.status(200).send({ 
+            message: 'ok', 
+            respuesta: respuesta[0].id, 
+            redireccion: "/", 
+            token: token 
+        });
     });
 })
 //******************************************************************************************************************* */
-app.get('/verificar', async (req, res) => {
-    try {
-        const token = req.cookies.cookiesesion;
-        if (!token) {
-            return res.status(401).json({ success: false, message: "No hay token" });
-        }
-
-        const decodificada = jsonwebtoken.verify(token, process.env.JWT_SECRET);
-        if (!decodificada.user) {
-            return res.status(401).json({ success: false, message: "Token inválido" });
-        }
-
-        const [rows] = await con.promise().query(
-            'SELECT id FROM usuario WHERE usuario = ?', 
-            [decodificada.user]
-        );
-
-        if (rows.length === 0) {
-            return res.status(401).json({ success: false, message: "Usuario no encontrado" });
-        }
-
-        return res.status(200).json({ success: true });
-
-    } catch (error) {
-        console.error('Error en verificación:', error);
-        return res.status(401).json({ success: false, message: "Token inválido o expirado" });
-    }
-});
-app.get('/verificar-sesion', async (req, res) => {
-    try {        const token = req.cookies.cookiesesion;
-        if (!token) {
+app.put('/verificar-sesion', async (req, res) => {
+    try {       
+        
+        const token = req.body.usuario;
+        console.log('Token recibido:', token);
+        if (!token || !token.startsWith('Bearer ')) {
             return res.json({ sesionActiva: false });
         }
+        
+        const tokenParts = token.split(' ');
+        const tokenValue = tokenParts[1];
+        try {
+            const decodificada = jsonwebtoken.verify(tokenValue, process.env.JWT_SECRET);
+            const [rows] = await con.promise().query(
+                'SELECT id FROM usuario WHERE usuario = ?', 
+                [decodificada.user]
+            );
 
-        const decodificada = jsonwebtoken.verify(token, process.env.JWT_SECRET);
-        if (!decodificada.user) {
+            if (rows.length === 0) {
+                return res.json({ sesionActiva: false });
+            }
+
+            return res.json({ sesionActiva: true });
+        } catch (tokenError) {
+            console.error('Error al verificar token:', tokenError);
             return res.json({ sesionActiva: false });
         }
-
-        const [rows] = await con.promise().query(
-            'SELECT id FROM usuario WHERE usuario = ?', 
-            [decodificada.user]
-        );
-
-        if (rows.length === 0) {
-            return res.json({ sesionActiva: false });
-        }
-
-        return res.json({ sesionActiva: true });
-
     } catch (error) {
         console.error('Error en verificación de sesión:', error);
         return res.json({ sesionActiva: false });
     }
-});
-
-app.post('/cerrar-sesion', (req, res) => {
-    res.clearCookie('cookiesesion', {
-        path: "/"
-    });
-    return res.status(200).json({ message: 'Sesión cerrada exitosamente' });
 });
 
 app.listen(3000, () => {

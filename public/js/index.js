@@ -1,6 +1,17 @@
+const sesion = sessionStorage.getItem("usuario");
 async function actualizarBotones() {
     try {
-        const response = await fetch('/verificar-sesion');
+        const response = await fetch('/verificar-sesion',
+            {
+                method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                usuario: sesion
+            })
+            }
+        );
         const data = await response.json();
         const contenedorBotones = document.getElementById('sesiones');
         
@@ -31,13 +42,14 @@ async function actualizarBotones() {
 
 async function cerrarSesion() {
     try {
-        const response = await fetch('/cerrar-sesion', {
-            method: 'POST'
-        });
-        if (response.ok) {
-            actualizarBotones();
+        const sesion = sessionStorage.getItem("usuario");
+        if(!sesion){
+            alert("No hay sesión activa");
+            return;
         }
-    } catch (error) {
+        sessionStorage.removeItem("usuario");
+    }
+    catch (error) {
         console.error('Error al cerrar sesión:', error);
     }
 }
