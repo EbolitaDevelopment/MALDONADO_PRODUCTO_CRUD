@@ -48,6 +48,7 @@ async function cerrarSesion() {
             return;
         }
         sessionStorage.removeItem("usuario");
+        window.location.href = "/";
     }
     catch (error) {
         console.error('Error al cerrar sesión:', error);
