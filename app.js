@@ -18,7 +18,7 @@ app.use(sesion({
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 horas
+        maxAge: 24 * 60 * 60 * 1000 
     }
 }))
 
@@ -72,10 +72,36 @@ function validarContraseña(password) {
 function validarUsuario(usuario) {
     return /^[a-zA-Z0-9]{1,30}$/.test(usuario);
 }
+
+function detectarComandosPeligrosos(texto) {
+    if (typeof texto !== 'string') return false;
+    
+    const comandosPeligrosos = [
+        /\bdrop\b/i,
+        /\bdelete\b/i,
+        /\bupdate\b/i,
+        /\bselect\b/i,
+        /--/,
+        /;/,
+        /\bor\b/i,
+        /\bunion\b/i,
+        /\binsert\b/i,
+        /\balter\b/i,
+        /\bexec\b/i,
+        /xp_/i
+    ];
+
+    return comandosPeligrosos.some(patron => patron.test(texto.toLowerCase()));
+}
+
 //******************************************************************************************************************* */
 app.post('/agregarUsuario', async (req, res) => {
     try {
         let { nombre, apellidop, apellidom, edad, posicion, peso, altura, nacionalidad, usuario, password, password2 } = req.body;
+
+        if ([nombre, apellidop, apellidom, nacionalidad, usuario, password].some(detectarComandosPeligrosos)) {
+            return res.status(400).send({ message: "Detectado intento de inyección SQL" });
+        }
 
         if (![nombre, apellidop, apellidom, edad, posicion, peso, altura, nacionalidad, usuario, password, password2].every(Boolean)) {
             return res.status(400).send({ message: "Faltan parámetros o hay datos manipulados en el registro" });
@@ -92,7 +118,7 @@ app.post('/agregarUsuario', async (req, res) => {
         }
 
         if (edad < 10 || edad > 100 || posicion < 1 || posicion > 5 || peso < 1 || peso > 300 || altura < 1 || altura > 300) {
-            return res.status(400).send({ message: "Datos Incorrectos" });
+            return res.status(400).send({ message: "Datos numericos sin sentido" });
         }
 
         if (!validarTexto(nombre) || !validarTexto(apellidom) || !validarTexto(apellidop) || !validarTexto(nacionalidad)) {
@@ -203,6 +229,9 @@ app.put('/obtenerUnUsuario', (req, res) => {
     if (!id || !solicitud) {
         return res.status(400).send({ message: "Faltan parámetros" });
     }
+    if([id,solicitud].some(detectarComandosPeligrosos)){
+        return res.status(400).send({ message: "No intentes adulterar la solicitud" });
+    }
     if (isNaN(id) || !validarTexto(solicitud) || contieneEtiquetaHTML(solicitud)) {
         return res.status(400).send({ message: "No intentes adulterar la solicitud" });
     }
@@ -246,7 +275,9 @@ app.put('/obtenerUnUsuario', (req, res) => {
 //******************************************************************************************************************* */
 app.put('/editarUsuario', (req, res) => {
     let { id, solicitud, cambio } = req.body;
-
+    if([id,solicitud,cambio].some(detectarComandosPeligrosos)){
+        return res.status(400).send({ message: "No intentes adulterar la solicitud" });
+    }
     if (!id || !solicitud || !cambio) {
         return res.status(400).send({ message: "Faltan parámetros" });
     }
@@ -303,6 +334,10 @@ app.put('/editarUsuario', (req, res) => {
 //******************************************************************************************************************* */
 app.delete('/BorrarUnUsuario', (req, res) => {
     let id = req.body.id
+    
+    if([id].some(detectarComandosPeligrosos)){
+        return res.status(400).send({ message: "No intentes adulterar la solicitud" });
+    }
     if (!id || isNaN(id)) {
         return res.status(400).send({ message: "Faltan parámetros o el id no es un número" });
     }
@@ -332,6 +367,10 @@ app.delete('/BorrarUsuarios', (req, res) => {
 app.put('/login', (req, res) => {
     let { usuario, password } = req.body;
     console.log(usuario, password)
+    
+    if([usuario,password].some(detectarComandosPeligrosos)){
+        return res.status(400).send({ message: "No intentes adulterar la solicitud" });
+    }
     if (!usuario || !password) {
         return res.status(400).send({ message: "Faltan parámetros" });
     }
@@ -361,6 +400,10 @@ app.put('/verificar-sesion', async (req, res) => {
     try {       
         
         const token = req.body.usuario;
+        
+    if([token].some(detectarComandosPeligrosos)){
+        return res.status(400).send({ message: "No intentes adulterar la solicitud" });
+    }
         console.log('Token recibido:', token);
         if (!token || !token.startsWith('Bearer ')) {
             return res.json({ sesionActiva: false });
