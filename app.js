@@ -7,6 +7,7 @@ const bodyParser = require('body-parser')
 const path = require("path")
 const jsonwebtoken = require("jsonwebtoken")
 const cookieParser = require('cookie-parser')
+const bcrypt = require('bcrypt')
 
 var app = express()
 dotenv.config()
@@ -130,9 +131,10 @@ app.post('/agregarUsuario', async (req, res) => {
         if (password !== password2) {
             return res.status(400).send({ message: "Las contraseñas no coinciden" });
         }
-        if (!validarUsuario(usuario)) {
-            return res.status(400).send({ message: "El usuario debe ser alfanumérico de entre 1 y 30 caracteres" });
-        }
+
+        // Hash de la contraseña
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
 
         const checkUser = () => {
             return new Promise((resolve, reject) => {
@@ -151,7 +153,7 @@ app.post('/agregarUsuario', async (req, res) => {
         const insertUser = () => {
             return new Promise((resolve, reject) => {
                 con.query('INSERT INTO usuario (usuario, nombre, apellidopaterno, apellidomaterno, edad, posición, altura, peso, nacionalidad, contraseña) VALUES (?,?,?,?,?,?,?,?,?,?)',
-                    [usuario, nombre, apellidop, apellidom, edad, posicion, altura, peso, nacionalidad, password],
+                    [usuario, nombre, apellidop, apellidom, edad, posicion, altura, peso, nacionalidad, hashedPassword],
                     (err, respuesta) => {
                         if (err) reject(err);
                         resolve(respuesta);
@@ -364,37 +366,50 @@ app.delete('/BorrarUsuarios', (req, res) => {
 
 })
 //******************************************************************************************************************* */
-app.put('/login', (req, res) => {
-    let { usuario, password } = req.body;
-    console.log(usuario, password)
-    
-    if([usuario,password].some(detectarComandosPeligrosos)){
-        return res.status(400).send({ message: "No intentes adulterar la solicitud" });
-    }
-    if (!usuario || !password) {
-        return res.status(400).send({ message: "Faltan parámetros" });
-    }
-    if (!validarContraseña(password) || !validarUsuario(usuario) || contieneEtiquetaHTML(usuario) || contieneEtiquetaHTML(password)) {
-        return res.status(400).send({ message: "No intentes adulterar la solicitud" });
-    }
-    con.query('SELECT id FROM usuario WHERE usuario = ? AND contraseña = ?', [usuario, password], (err, respuesta, fields) => {
-        if (err) {
-            console.log("Error al conectar", err);
-            return res.status(500).send({ message: "Error al conectar" });
+app.put('/login', async (req, res) => {
+    try {
+        let { usuario, password } = req.body;
+        
+        if([usuario,password].some(detectarComandosPeligrosos)){
+            return res.status(400).send({ message: "No intentes adulterar la solicitud" });
         }
-        if (respuesta.length === 0) {
+        if (!usuario || !password) {
+            return res.status(400).send({ message: "Faltan parámetros" });
+        }
+        if (!validarUsuario(usuario) || contieneEtiquetaHTML(usuario) || contieneEtiquetaHTML(password)) {
+            return res.status(400).send({ message: "No intentes adulterar la solicitud" });
+        }
+
+        // Obtener usuario y contraseña hasheada
+        const [user] = await con.promise().query(
+            'SELECT id, contraseña FROM usuario WHERE usuario = ?', 
+            [usuario]
+        );
+
+        if (user.length === 0) {
             return res.status(404).send({ message: "Usuario no encontrado" });
         }
+
+        // Comparar contraseñas
+        const match = await bcrypt.compare(password, user[0].contraseña);
+        if (!match) {
+            return res.status(401).send({ message: "Contraseña incorrecta" });
+        }
+
         const token = 'Bearer ' + jsonwebtoken.sign({ user: usuario }, process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRATION });
+
         return res.status(200).send({ 
             message: 'ok', 
-            respuesta: respuesta[0].id, 
+            respuesta: user[0].id, 
             redireccion: "/", 
             token: token 
         });
-    });
-})
+    } catch (error) {
+        console.error(error);
+        return res.status(500).send({ message: "Error al iniciar sesión" });
+    }
+});
 //******************************************************************************************************************* */
 app.put('/verificar-sesion', async (req, res) => {
     try {       
