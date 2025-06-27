@@ -7,7 +7,7 @@ const bodyParser = require('body-parser')
 const path = require("path")
 const jsonwebtoken = require("jsonwebtoken")
 const cookieParser = require('cookie-parser')
-const bcrypt = require('bcrypt')
+const crypto = require('crypto')
 
 var app = express()
 dotenv.config()
@@ -60,7 +60,16 @@ app.get("/control",(req, res) => res.sendFile(path.join(__dirname, "paginas/cont
 app.get("/registro",(req, res) => res.sendFile(path.join(__dirname, "paginas/registro.html")))
 app.get("/isesion",(req, res) => res.sendFile(path.join(__dirname, "paginas/login.html")))
 
-//******************************************************************************************************************* */
+
+function cifrarAES(texto) {
+    const key = process.env.AES_SECRET_KEY;
+    const iv = Buffer.alloc(16, 0); 
+    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key), iv);
+    let encrypted = cipher.update(texto, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return encrypted;
+}
+
 function contieneEtiquetaHTML(texto) {
     return /<[^>]+>/.test(texto);
 }
@@ -132,9 +141,7 @@ app.post('/agregarUsuario', async (req, res) => {
             return res.status(400).send({ message: "Las contraseñas no coinciden" });
         }
 
-        // Hash de la contraseña
-        const saltRounds = 10;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const encryptedPassword = cifrarAES(password);
 
         const checkUser = () => {
             return new Promise((resolve, reject) => {
@@ -153,7 +160,7 @@ app.post('/agregarUsuario', async (req, res) => {
         const insertUser = () => {
             return new Promise((resolve, reject) => {
                 con.query('INSERT INTO usuario (usuario, nombre, apellidopaterno, apellidomaterno, edad, posición, altura, peso, nacionalidad, contraseña) VALUES (?,?,?,?,?,?,?,?,?,?)',
-                    [usuario, nombre, apellidop, apellidom, edad, posicion, altura, peso, nacionalidad, hashedPassword],
+                    [usuario, nombre, apellidop, apellidom, edad, posicion, altura, peso, nacionalidad, encryptedPassword],
                     (err, respuesta) => {
                         if (err) reject(err);
                         resolve(respuesta);
@@ -380,7 +387,7 @@ app.put('/login', async (req, res) => {
             return res.status(400).send({ message: "No intentes adulterar la solicitud" });
         }
 
-        // Obtener usuario y contraseña hasheada
+        // Obtener usuario y contraseña cifrada
         const [user] = await con.promise().query(
             'SELECT id, contraseña FROM usuario WHERE usuario = ?', 
             [usuario]
@@ -390,9 +397,8 @@ app.put('/login', async (req, res) => {
             return res.status(404).send({ message: "Usuario no encontrado" });
         }
 
-        // Comparar contraseñas
-        const match = await bcrypt.compare(password, user[0].contraseña);
-        if (!match) {
+        const encryptedPassword = cifrarAES(password);
+        if (user[0].contraseña !== encryptedPassword) {
             return res.status(401).send({ message: "Contraseña incorrecta" });
         }
 
